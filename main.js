@@ -299,6 +299,7 @@ function deleteNickname(index) {
     }
 }
 
+// Find this function in your script.js (or main.js) and replace it:
 function toggleCustomInput() {
     const categoryRadiosContainer = document.querySelector('.radio-group');
     const userWordsContainer = document.getElementById('userWordsContainer');
@@ -307,14 +308,13 @@ function toggleCustomInput() {
     if (userWordsRadio.checked) {
         categoryRadiosContainer.style.display = 'none';
         userWordsContainer.style.display = 'block';
-        markovOrderContainer.style.display = 'block'; // Show Markov Order input
+        markovOrderContainer.style.display = 'block'; // Show Markov Order input when Custom is selected
     } else {
-        categoryRadiosContainer.style.display = 'grid';
+        categoryRadiosContainer.style.display = 'grid'; // Revert to grid display for radios
         userWordsContainer.style.display = 'none';
-        // You might want to hide the Markov Order input if it's only for custom lists
-        // Or keep it visible if it applies globally. For now, let's keep it visible.
-        // markovOrderContainer.style.display = 'none'; // Uncomment to hide for default categories
+        markovOrderContainer.style.display = 'none'; // HIDE Markov Order input for predefined categories
     }
+    // Clear generated nickname and hide buttons when switching input modes
     generatedNicknameInput.value = "";
     copyBtn.style.display = 'none';
     saveBtn.style.display = 'none';
