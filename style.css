@@ -100,8 +100,9 @@ h1 {
 }
 
 .radio-group {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    display: flex; /* Changed from grid to flex */
+    flex-wrap: wrap; /* Allows items to wrap to the next line */
+    justify-content: center; /* Centers the items horizontally within the row */
     gap: 8px;
     margin-top: 10px;
 }
@@ -117,14 +118,14 @@ h1 {
     border-radius: 20px;
     cursor: pointer;
     transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
-    font-size: 0.8em;
+    font-size: 0.9em; /* Adjusted font size */
     border: 1px solid transparent;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    min-width: unset;
-    height: 32px;
+    min-width: 80px; /* Adjusted min-width */
+    height: 35px; /* Adjusted height */
     box-sizing: border-box;
     white-space: nowrap;
     overflow: hidden;
@@ -234,11 +235,11 @@ h1 {
         font-size: 2em;
     }
     .radio-group {
-        grid-template-columns: repeat(3, 1fr);
+        /* grid-template-columns: repeat(3, 1fr); -- REMOVED */
         gap: 10px;
     }
     .radio-group label {
-        font-size: 0.8em;
+        font-size: 0.8em; /* Can be adjusted further if needed */
         padding: 6px 10px;
         height: 30px;
     }
@@ -257,11 +258,11 @@ h1 {
 
 @media (max-width: 580px) {
     .radio-group {
-        grid-template-columns: repeat(2, 1fr);
+        /* grid-template-columns: repeat(2, 1fr); -- REMOVED */
         gap: 8px;
     }
     .radio-group label {
-        font-size: 0.9em;
+        font-size: 0.9em; /* Can be adjusted further if needed */
         height: 35px;
     }
 }
@@ -289,7 +290,7 @@ h1 {
         padding: 8px 10px; /* Slightly reduced horizontal padding */
     }
     .radio-group {
-        grid-template-columns: repeat(1, 1fr);
+        /* grid-template-columns: repeat(1, 1fr); -- REMOVED */
         gap: 8px;
     }
     .radio-group label {
@@ -300,7 +301,6 @@ h1 {
         font-size: 0.8em;
     }
 }
-/* Add these new styles to your existing style.css */
 
 #userWordsContainer {
     text-align: left; /* Align label and textarea to the left */
