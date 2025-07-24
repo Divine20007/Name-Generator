@@ -144,7 +144,8 @@ const categoryRadios = document.querySelectorAll('input[name="nicknameCategory"]
 const userWordsInput = document.getElementById('userWords');
 const userWordsRadio = document.getElementById('userCustom');
 const savedNicknamesList = document.getElementById('savedNicknamesList');
-const markovOrderInput = document.getElementById('markovOrder'); // NEW: Markov Order input
+const markovOrderInput = document.getElementById('markovOrder');
+const backToCategoriesBtn = document.getElementById('backToCategoriesBtn'); // NEW: Back button
 
 function handleGenerateNickname() {
     let namesForChain = [];
@@ -290,29 +291,20 @@ function displaySavedNicknames() {
     });
 }
 
-function deleteNickname(index) {
-    let savedNicknames = JSON.parse(localStorage.getItem('savedNicknames')) || [];
-    if (index > -1 && index < savedNicknames.length) {
-        savedNicknames.splice(index, 1);
-        localStorage.setItem('savedNicknames', JSON.stringify(savedNicknames));
-        displaySavedNicknames();
-    }
-}
-
-// Find this function in your script.js (or main.js) and replace it:
+// Corrected toggleCustomInput function (as it was before the last change, needed for the "back" button)
 function toggleCustomInput() {
     const categoryRadiosContainer = document.querySelector('.radio-group');
     const userWordsContainer = document.getElementById('userWordsContainer');
-    const markovOrderContainer = document.querySelector('.markov-order-selection'); // Get the new container
+    const markovOrderContainer = document.querySelector('.markov-order-selection');
 
     if (userWordsRadio.checked) {
-        categoryRadiosContainer.style.display = 'none';
+        categoryRadiosContainer.style.display = 'none'; // Hides the main category radios
         userWordsContainer.style.display = 'block';
-        markovOrderContainer.style.display = 'block'; // Show Markov Order input when Custom is selected
+        markovOrderContainer.style.display = 'block';
     } else {
-        categoryRadiosContainer.style.display = 'grid'; // Revert to grid display for radios
+        categoryRadiosContainer.style.display = 'grid'; // Shows the main category radios
         userWordsContainer.style.display = 'none';
-        markovOrderContainer.style.display = 'none'; // HIDE Markov Order input for predefined categories
+        markovOrderContainer.style.display = 'none';
     }
     // Clear generated nickname and hide buttons when switching input modes
     generatedNicknameInput.value = "";
@@ -326,22 +318,34 @@ document.addEventListener('DOMContentLoaded', () => {
     copyBtn.addEventListener('click', copyNickname);
     saveBtn.addEventListener('click', saveNickname);
 
+    // Event listeners for category selection
     categoryRadios.forEach(radio => {
         radio.addEventListener('change', toggleCustomInput);
     });
     userWordsRadio.addEventListener('change', toggleCustomInput);
 
-    // NEW: Add a listener to Markov Order input to clear generated nickname on change
+    // Listener for Markov Order input to clear generated nickname on change
     markovOrderInput.addEventListener('input', () => {
         generatedNicknameInput.value = "";
         copyBtn.style.display = 'none';
         saveBtn.style.display = 'none';
     });
 
+    // Event listener for the "Back to Categories" button
+    backToCategoriesBtn.addEventListener('click', () => {
+        // Find the default category radio (e.g., "Gaming")
+        const defaultCategoryRadio = document.getElementById('categoryGaming');
+        if (defaultCategoryRadio) {
+            defaultCategoryRadio.checked = true; // Set it as checked
+            // Manually trigger the change event to update the UI
+            defaultCategoryRadio.dispatchEvent(new Event('change'));
+        }
+    });
 
+    // Initial state setup
     generatedNicknameInput.placeholder = "Your new nickname appears here...";
     copyBtn.style.display = 'none';
     saveBtn.style.display = 'none';
-    toggleCustomInput();
-    displaySavedNicknames();
+    toggleCustomInput(); // Call once on load to set initial visibility
+    displaySavedNicknames(); // Load saved nicknames on page load
 });
