@@ -58,19 +58,42 @@
                 <div><input type="radio" id="categoryWeapon" name="nicknameCategory" value="Weapon"><label for="categoryWeapon">Weapon</label></div>
                 <div><input type="radio" id="userCustom" name="nicknameCategory" value="custom"><label for="userCustom">Custom List</label></div>
             </div>
-
+<button id="randomCategoryBtn" class="action-button">Surprise Me! (Random Category)</button>
             <div id="userWordsContainer" style="display: none; margin-top: 20px;">
                 <label for="userWords" style="font-size: 1em; margin-bottom: 5px;">Enter your words (comma, space, or new line separated):</label>
                 <textarea id="userWords" rows="5" placeholder="e.g., happy, brave, quick, smart, awesome"></textarea>
                   <button id="backToCategoriesBtn" class="action-button secondary-button" style="margin-top: 15px;">
         ← Back to Categories</button>
             </div>
+            <div class="filter-options">
+    <h3>Filters:</h3>
+    <div class="filter-group">
+        <label for="minLength">Min Length:</label>
+        <input type="number" id="minLength" min="1" max="20" value="3">
+    </div>
+    <div class="filter-group">
+        <label for="maxLength">Max Length:</label>
+        <input type="number" id="maxLength" min="3" max="20" value="12">
+    </div>
+    <div class="filter-group">
+        <label for="startsWith">Starts With:</label>
+        <input type="text" id="startsWith" maxlength="5">
+    </div>
+    <div class="filter-group">
+        <label for="endsWith">Ends With:</label>
+        <input type="text" id="endsWith" maxlength="5">
+    </div>
+    <div class="filter-group">
+        <label for="includesText">Includes:</label>
+        <input type="text" id="includesText" maxlength="10">
+    </div>
+</div>
             <div class="markov-order-selection" style="margin-top: 20px;">
     <label for="markovOrder" style="font-size: 1em; margin-bottom: 5px; display: block;">Markov Order (Higher = less mixing):</label>
     <input type="number" id="markovOrder" value="3" min="1" max="5" style="padding: 8px; border-radius: 5px; border: 1px solid var(--border-glow); background-color: var(--bg-dark); color: var(--text-light); width: 80px; text-align: center;">
     <p class="instruction-text" style="font-size: 0.8em; margin-top: 5px; color: var(--text-muted);">
         Try 2 or 3 for more mixing, 4 or 5 for more distinct words.
-        Recommend: "3/4" [Depending on text length].
+        Recommended: "3-5" [Depending on text length].
     </p>
 </div>
         </div>
@@ -81,20 +104,30 @@
             <input type="text" id="generatedNickname" readonly placeholder="Your new nickname appears here...">
             <button id="copyBtn" class="action-button secondary-button" style="display: none;">COPY</button>
             <button id="saveBtn" class="action-button secondary-button" style="display: none;">SAVE</button>
+            <button id="shareBtn" class="action-button">Share Nickname</button>
         </div>
 
         <p class="instruction-text">
             Select a category and tap "GENERATE NICKNAME" for unique ideas!
         </p>
     </div>
+<div class="saved-nicknames-section">
+    <h2>Saved Nicknames</h2>
 
-    <div class="saved-nicknames-section container">
-        <h2>Your Saved Nicknames</h2>
-        <div id="savedNicknamesList" class="saved-nicknames-list">
-            <p class="instruction-text">No nicknames saved yet.</p>
-        </div>
+    <div class="collection-management">
+        <label for="newCollectionName">New Collection:</label>
+        <input type="text" id="newCollectionName" placeholder="e.g., Gaming Names">
+        <button id="addCollectionBtn" class="action-button">Add Collection</button>
     </div>
 
+    <div class="collection-selector">
+        <label for="currentCollection">Active Collection:</label>
+        <select id="currentCollection"></select>
+    </div>
+
+    <div id="savedNicknamesList">
+        </div>
+</div>
     <script src="main.js"></script>
 </body>
 </html>

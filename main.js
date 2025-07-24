@@ -261,7 +261,10 @@ const nameData = {
 // --- 2. MARKOV CHAIN LOGIC (Reusable) ---
 // MARKOV_ORDER is now read from user input
 
-function buildMarkovChain(names, markovOrder) { // markovOrder is now a parameter
+// Data for Markov Chain (IMPORTANT: Ensure this 'nameData' object is defined earlier in your file)
+// If you don't have this, you need to add it somewhere at the top of your main.js
+
+function buildMarkovChain(names, markovOrder) {
     const chain = {};
     const processedNames = names
         .filter(name => name.trim() !== '')
@@ -299,18 +302,16 @@ function buildMarkovChain(names, markovOrder) { // markovOrder is now a paramete
     return chain;
 }
 
-function generateNickname(chain, markovOrder, maxLength = 12) { // markovOrder is now a parameter
-    if (!chain) {
-        return "";
-    }
+function generateNickname(chain, markovOrder, options = {}) {
+    const { maxLength = 12, minLength = 3, startsWith = '', endsWith = '', includesText = '' } = options;
 
     let currentPrefix = "@".repeat(markovOrder);
     let nickname = "";
 
     while (true) {
         const possibleNextChars = chain[currentPrefix];
-        
-        if (!possibleNextChars) { 
+
+        if (!possibleNextChars) {
             break;
         }
 
@@ -329,18 +330,33 @@ function generateNickname(chain, markovOrder, maxLength = 12) { // markovOrder i
         if (nextChar === null || nextChar === "$") {
             break;
         }
-        
+
         nickname += nextChar;
-        currentPrefix = currentPrefix.substring(1) + nextChar; 
+        currentPrefix = currentPrefix.substring(1) + nextChar;
 
         if (nickname.length >= maxLength) {
             break;
         }
     }
-    return nickname.charAt(0).toUpperCase() + nickname.slice(1);
+
+    // Capitalize the first letter
+    let finalNickname = nickname.charAt(0).toUpperCase() + nickname.slice(1);
+
+    // Apply filters
+    const meetsFilters =
+        (finalNickname.length >= minLength) &&
+        (startsWith === '' || finalNickname.toLowerCase().startsWith(startsWith.toLowerCase())) &&
+        (endsWith === '' || finalNickname.toLowerCase().endsWith(endsWith.toLowerCase())) &&
+        (includesText === '' || finalNickname.toLowerCase().includes(includesText.toLowerCase()));
+
+    if (meetsFilters) {
+        return finalNickname;
+    } else {
+        return ""; // Indicate failure to meet filters
+    }
 }
 
-// --- 3. UI Interaction Logic ---
+// --- 2. UI Element Constants ---
 
 const generateBtn = document.getElementById('generateBtn');
 const copyBtn = document.getElementById('copyBtn');
@@ -351,17 +367,63 @@ const userWordsInput = document.getElementById('userWords');
 const userWordsRadio = document.getElementById('userCustom');
 const savedNicknamesList = document.getElementById('savedNicknamesList');
 const markovOrderInput = document.getElementById('markovOrder');
-const backToCategoriesBtn = document.getElementById('backToCategoriesBtn'); // NEW: Back button
+// Ensure backToCategoriesBtn is defined, if not, add it earlier in your file, e.g.:
+const backToCategoriesBtn = document.getElementById('backToCategoriesBtn');
+
+
+// NEW: Constants for filter inputs
+const minLengthInput = document.getElementById('minLength');
+const maxLengthInput = document.getElementById('maxLength');
+const startsWithInput = document.getElementById('startsWith');
+const endsWithInput = document.getElementById('endsWith');
+const includesTextInput = document.getElementById('includesText');
+
+// NEW: Constant for the random category button
+const randomCategoryBtn = document.getElementById('randomCategoryBtn');
+
+// NEW: Constants for collection management UI
+const newCollectionNameInput = document.getElementById('newCollectionName');
+const addCollectionBtn = document.getElementById('addCollectionBtn');
+const currentCollectionSelect = document.getElementById('currentCollection');
+
+// NEW: Constant for the share button
+const shareBtn = document.getElementById('shareBtn');
+
+
+// --- 3. UI Interaction Logic (Functions) ---
 
 function handleGenerateNickname() {
     let namesForChain = [];
     let currentMarkovOrder = parseInt(markovOrderInput.value);
+
+    // Read filter values
+    const minLength = parseInt(minLengthInput.value) || 3;
+    const maxLength = parseInt(maxLengthInput.value) || 12;
+    const startsWith = startsWithInput.value.trim();
+    const endsWith = endsWithInput.value.trim();
+    const includesText = includesTextInput.value.trim();
 
     // Validate Markov Order
     if (isNaN(currentMarkovOrder) || currentMarkovOrder < 1 || currentMarkovOrder > 5) {
         generatedNicknameInput.value = "Markov Order must be between 1 and 5!";
         copyBtn.style.display = 'none';
         saveBtn.style.display = 'none';
+        shareBtn.style.display = 'none';
+        return;
+    }
+    // Validate Length filters
+    if (minLength > maxLength) {
+        generatedNicknameInput.value = "Min Length cannot be greater than Max Length!";
+        copyBtn.style.display = 'none';
+        saveBtn.style.display = 'none';
+        shareBtn.style.display = 'none';
+        return;
+    }
+    if (minLength < 1 || maxLength < 1) {
+        generatedNicknameInput.value = "Length must be at least 1!";
+        copyBtn.style.display = 'none';
+        saveBtn.style.display = 'none';
+        shareBtn.style.display = 'none';
         return;
     }
 
@@ -375,6 +437,7 @@ function handleGenerateNickname() {
             generatedNicknameInput.value = "Please enter some words in the custom list!";
             copyBtn.style.display = 'none';
             saveBtn.style.display = 'none';
+            shareBtn.style.display = 'none';
             return;
         }
     } else {
@@ -392,43 +455,55 @@ function handleGenerateNickname() {
             generatedNicknameInput.value = "No names for this category!";
             copyBtn.style.display = 'none';
             saveBtn.style.display = 'none';
+            shareBtn.style.display = 'none';
             return;
         }
     }
-    
-    const currentChain = buildMarkovChain(namesForChain, currentMarkovOrder); // Pass order
+
+    const currentChain = buildMarkovChain(namesForChain, currentMarkovOrder);
 
     if (!currentChain) {
         generatedNicknameInput.value = "Not enough valid words to generate a nickname. Try adding more!";
         copyBtn.style.display = 'none';
         saveBtn.style.display = 'none';
+        shareBtn.style.display = 'none';
         return;
     }
 
     let newNickname = "";
     let attempts = 0;
-    const maxAttempts = 50;
+    const maxAttempts = 200; // Increased attempts for filters
 
-    while (newNickname.length < 3 && attempts < maxAttempts) {
-        newNickname = generateNickname(currentChain, currentMarkovOrder, 12); // Pass order
+    const filterOptions = {
+        minLength: minLength,
+        maxLength: maxLength,
+        startsWith: startsWith,
+        endsWith: endsWith,
+        includesText: includesText
+    };
+
+    while ((!newNickname || newNickname.length < minLength) && attempts < maxAttempts) {
+        newNickname = generateNickname(currentChain, currentMarkovOrder, filterOptions);
         attempts++;
     }
 
-    if (!newNickname || newNickname.length < 3) {
-        generatedNicknameInput.value = "Could not generate a suitable nickname. Try adjusting Markov Order or adding more words!";
+    if (!newNickname || newNickname.length < minLength) {
+        generatedNicknameInput.value = "Could not generate a suitable nickname with current filters. Try relaxing them or adjusting Markov Order/words!";
         copyBtn.style.display = 'none';
         saveBtn.style.display = 'none';
+        shareBtn.style.display = 'none';
     } else {
         generatedNicknameInput.value = newNickname;
         copyBtn.style.display = 'inline-block';
         saveBtn.style.display = 'inline-block';
+        shareBtn.style.display = 'inline-block';
     }
 }
 
 function copyNickname() {
     generatedNicknameInput.select();
     generatedNicknameInput.setSelectionRange(0, 99999);
-    
+
     navigator.clipboard.writeText(generatedNicknameInput.value)
         .then(() => {
             const originalText = copyBtn.textContent;
@@ -439,9 +514,54 @@ function copyNickname() {
         })
         .catch(err => {
             console.error('Failed to copy text: ', err);
+            // Fallback for older browsers
             document.execCommand('copy');
             alert('Nickname copied to clipboard!');
         });
+}
+
+function shareNickname() {
+    const nicknameToShare = generatedNicknameInput.value;
+
+    if (!nicknameToShare || nicknameToShare === "Your new nickname appears here..." || nicknameToShare.includes("Could not generate") || nicknameToShare.includes("No names for this category") || nicknameToShare.includes("Please enter some words") || nicknameToShare.includes("Markov Order must be")) {
+        alert("Generate a valid nickname first to share!");
+        return;
+    }
+
+    if (navigator.share) {
+        navigator.share({
+            title: 'My New Nickname!',
+            text: `Check out my new nickname: "${nicknameToShare}" from the Nickname Generator!`,
+            url: window.location.href
+        }).then(() => {
+            console.log('Successfully shared');
+        }).catch((error) => {
+            console.error('Error sharing:', error);
+            alert('Failed to share. You can manually copy the nickname.');
+        });
+    } else {
+        navigator.clipboard.writeText(nicknameToShare)
+            .then(() => {
+                const originalText = shareBtn.textContent;
+                shareBtn.textContent = "COPIED TO CLIPBOARD!";
+                setTimeout(() => {
+                    shareBtn.textContent = originalText;
+                }, 2000);
+            })
+            .catch(err => {
+                console.error('Failed to copy text for sharing: ', err);
+                alert('Web Share API not supported. Nickname: "' + nicknameToShare + '" copied to clipboard.');
+            });
+    }
+}
+
+function getSavedData() {
+    let savedData = JSON.parse(localStorage.getItem('savedNicknamesData')) || {};
+    if (Object.keys(savedData).length === 0) {
+        savedData['Default'] = [];
+        localStorage.setItem('savedNicknamesData', JSON.stringify(savedData));
+    }
+    return savedData;
 }
 
 function saveNickname() {
@@ -450,12 +570,18 @@ function saveNickname() {
         return;
     }
 
-    let savedNicknames = JSON.parse(localStorage.getItem('savedNicknames')) || [];
-    if (!savedNicknames.includes(nicknameToSave)) {
-        savedNicknames.push(nicknameToSave);
-        localStorage.setItem('savedNicknames', JSON.stringify(savedNicknames));
-        displaySavedNicknames(); // Re-display the list immediately after saving
-        
+    let savedData = getSavedData();
+    const activeCollection = currentCollectionSelect.value || 'Default';
+
+    if (!savedData[activeCollection]) {
+        savedData[activeCollection] = [];
+    }
+
+    if (!savedData[activeCollection].includes(nicknameToSave)) {
+        savedData[activeCollection].push(nicknameToSave);
+        localStorage.setItem('savedNicknamesData', JSON.stringify(savedData));
+        displaySavedNicknames();
+
         const originalText = saveBtn.textContent;
         saveBtn.textContent = "SAVED!";
         setTimeout(() => {
@@ -470,67 +596,147 @@ function saveNickname() {
     }
 }
 
-function deleteNickname(index) {
-    let savedNicknames = JSON.parse(localStorage.getItem('savedNicknames')) || [];
-    if (index > -1 && index < savedNicknames.length) {
-        savedNicknames.splice(index, 1);
-        localStorage.setItem('savedNicknames', JSON.stringify(savedNicknames));
-        displaySavedNicknames(); // Re-display the list after deletion
+function deleteNickname(collectionName, nicknameIndex) {
+    let savedData = getSavedData();
+    if (savedData[collectionName] && nicknameIndex > -1 && nicknameIndex < savedData[collectionName].length) {
+        savedData[collectionName].splice(nicknameIndex, 1);
+
+        if (savedData[collectionName].length === 0 && collectionName !== 'Default') {
+            delete savedData[collectionName];
+            if (currentCollectionSelect.value === collectionName) {
+                currentCollectionSelect.value = 'Default';
+            }
+            populateCollectionSelect();
+        }
+
+        localStorage.setItem('savedNicknamesData', JSON.stringify(savedData));
+        displaySavedNicknames();
     }
 }
 
-// Function to display saved nicknames - REMOVED the querySelectorAll part for event delegation
-function displaySavedNicknames() {
-    savedNicknamesList.innerHTML = ''; // Clear existing list items
-    let savedNicknames = JSON.parse(localStorage.getItem('savedNicknames')) || [];
+function addCollection() {
+    const newName = newCollectionNameInput.value.trim();
+    if (newName && newName.length > 0) {
+        let savedData = getSavedData();
+        if (!savedData[newName]) {
+            savedData[newName] = [];
+            localStorage.setItem('savedNicknamesData', JSON.stringify(savedData));
+            newCollectionNameInput.value = '';
+            populateCollectionSelect(newName);
+            displaySavedNicknames();
+        } else {
+            alert('Collection "' + newName + '" already exists!');
+        }
+    }
+}
 
-    if (savedNicknames.length === 0) {
-        savedNicknamesList.innerHTML = '<p class="instruction-text">No nicknames saved yet.</p>';
+function populateCollectionSelect(selectedCollection = null) {
+    currentCollectionSelect.innerHTML = '';
+    const savedData = getSavedData();
+    const collectionNames = Object.keys(savedData).sort();
+
+    if (collectionNames.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'No Collections Available';
+        currentCollectionSelect.appendChild(option);
+        currentCollectionSelect.disabled = true;
+        return;
+    } else {
+        currentCollectionSelect.disabled = false;
+    }
+
+    collectionNames.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name;
+        currentCollectionSelect.appendChild(option);
+    });
+
+    const storedActiveCollection = localStorage.getItem('activeCollection');
+    if (selectedCollection && savedData[selectedCollection]) {
+        currentCollectionSelect.value = selectedCollection;
+    } else if (storedActiveCollection && savedData[storedActiveCollection]) {
+        currentCollectionSelect.value = storedActiveCollection;
+    } else if (savedData['Default']) {
+        currentCollectionSelect.value = 'Default';
+    }
+}
+
+function displaySavedNicknames() {
+    savedNicknamesList.innerHTML = '';
+    const savedData = getSavedData();
+    const collectionNames = Object.keys(savedData).sort();
+
+    if (collectionNames.length === 0 || (collectionNames.length === 1 && savedData['Default'] && savedData['Default'].length === 0)) {
+        savedNicknamesList.innerHTML = '<p class="instruction-text">No nicknames saved yet in any collection.</p>';
         return;
     }
 
-    savedNicknames.forEach((nickname, index) => {
-        const listItem = document.createElement('div');
-        listItem.classList.add('saved-nickname-item');
-        listItem.innerHTML = `
-            <span>${nickname}</span>
-            <button class="delete-nickname-btn" data-index="${index}">X</button>
-        `;
-        savedNicknamesList.appendChild(listItem);
+    collectionNames.forEach(collectionName => {
+        const nicknamesInCollection = savedData[collectionName];
+        if (nicknamesInCollection && nicknamesInCollection.length > 0) {
+            const collectionDiv = document.createElement('div');
+            collectionDiv.classList.add('nickname-collection');
+
+            const collectionHeader = document.createElement('h3');
+            collectionHeader.textContent = collectionName;
+            collectionDiv.appendChild(collectionHeader);
+
+            const nicknameList = document.createElement('div');
+            nicknameList.classList.add('nickname-list-items');
+
+            nicknamesInCollection.forEach((nickname, index) => {
+                const listItem = document.createElement('div');
+                listItem.classList.add('saved-nickname-item');
+                listItem.innerHTML = `
+                    <span>${nickname}</span>
+                    <button class="delete-nickname-btn" data-collection="${collectionName}" data-index="${index}">X</button>
+                `;
+                nicknameList.appendChild(listItem);
+            });
+            collectionDiv.appendChild(nicknameList);
+            savedNicknamesList.appendChild(collectionDiv);
+        }
     });
-    // NO LONGER ADDING EVENT LISTENERS HERE FOR EACH BUTTON
-    // They are now handled by event delegation on the parent 'savedNicknamesList'
 }
 
-// Corrected toggleCustomInput function
 function toggleCustomInput() {
     const categoryRadiosContainer = document.querySelector('.radio-group');
     const userWordsContainer = document.getElementById('userWordsContainer');
     const markovOrderContainer = document.querySelector('.markov-order-selection');
+    const filterOptionsContainer = document.querySelector('.filter-options');
 
     if (userWordsRadio.checked) {
-        categoryRadiosContainer.style.display = 'none'; // Hides the main category radios
+        categoryRadiosContainer.style.display = 'none';
         userWordsContainer.style.display = 'block';
         markovOrderContainer.style.display = 'block';
+        filterOptionsContainer.style.display = 'block';
+        randomCategoryBtn.style.display = 'none';
     } else {
-        // *** THE FIX IS HERE: Changed 'grid' to 'flex' ***
-        categoryRadiosContainer.style.display = 'flex'; // Shows the main category radios
+        categoryRadiosContainer.style.display = 'flex';
         userWordsContainer.style.display = 'none';
-        markovOrderContainer.style.display = 'none';
+        markovOrderContainer.style.display = 'block';
+        filterOptionsContainer.style.display = 'block';
+        randomCategoryBtn.style.display = 'inline-block';
     }
-    // Clear generated nickname and hide buttons when switching input modes
     generatedNicknameInput.value = "";
     copyBtn.style.display = 'none';
     saveBtn.style.display = 'none';
+    shareBtn.style.display = 'none';
 }
 
+// --- 4. Event Listeners (DOMContentLoaded) ---
 
 document.addEventListener('DOMContentLoaded', () => {
+
+    // Main generator buttons
     generateBtn.addEventListener('click', handleGenerateNickname);
     copyBtn.addEventListener('click', copyNickname);
     saveBtn.addEventListener('click', saveNickname);
+    shareBtn.addEventListener('click', shareNickname);
 
-    // Event listeners for category selection
+    // Category & Custom input switching
     categoryRadios.forEach(radio => {
         radio.addEventListener('change', toggleCustomInput);
     });
@@ -541,38 +747,79 @@ document.addEventListener('DOMContentLoaded', () => {
         generatedNicknameInput.value = "";
         copyBtn.style.display = 'none';
         saveBtn.style.display = 'none';
+        shareBtn.style.display = 'none';
     });
+
+    // Event listeners for Filter inputs to clear generated nickname on change
+    minLengthInput.addEventListener('input', () => { generatedNicknameInput.value = ""; copyBtn.style.display = 'none'; saveBtn.style.display = 'none'; shareBtn.style.display = 'none'; });
+    maxLengthInput.addEventListener('input', () => { generatedNicknameInput.value = ""; copyBtn.style.display = 'none'; saveBtn.style.display = 'none'; shareBtn.style.display = 'none'; });
+    startsWithInput.addEventListener('input', () => { generatedNicknameInput.value = ""; copyBtn.style.display = 'none'; saveBtn.style.display = 'none'; shareBtn.style.display = 'none'; });
+    endsWithInput.addEventListener('input', () => { generatedNicknameInput.value = ""; copyBtn.style.display = 'none'; saveBtn.style.display = 'none'; shareBtn.style.display = 'none'; });
+    includesTextInput.addEventListener('input', () => { generatedNicknameInput.value = ""; copyBtn.style.display = 'none'; saveBtn.style.display = 'none'; shareBtn.style.display = 'none'; });
 
     // Event listener for the "Back to Categories" button
     backToCategoriesBtn.addEventListener('click', () => {
-        // Find the default category radio (e.g., "Gaming")
         const defaultCategoryRadio = document.getElementById('categoryGaming');
         if (defaultCategoryRadio) {
-            defaultCategoryRadio.checked = true; // Set it as checked
-            // Manually trigger the change event to update the UI
+            defaultCategoryRadio.checked = true;
             defaultCategoryRadio.dispatchEvent(new Event('change'));
         }
     });
 
-    // --- NEW: Event Delegation for Delete Buttons ---
-    // Attach ONE listener to the parent container
-    savedNicknamesList.addEventListener('click', function(event) {
-        // Check if the clicked element (or its parent) has the 'delete-nickname-btn' class
-        if (event.target.classList.contains('delete-nickname-btn')) {
-            const indexToDelete = parseInt(event.target.dataset.index);
-            // Ensure the index is a valid number before calling deleteNickname
-            if (!isNaN(indexToDelete)) {
-                deleteNickname(indexToDelete);
+    // Event listener for Random Category button
+    randomCategoryBtn.addEventListener('click', () => {
+        const categoryKeys = Object.keys(nameData);
+        const filterableCategoryKeys = categoryKeys.filter(key => key !== 'userCustom');
+
+        if (filterableCategoryKeys.length > 0) {
+            const randomIndex = Math.floor(Math.random() * filterableCategoryKeys.length);
+            const randomCategory = filterableCategoryKeys[randomIndex];
+
+            const radioToSelect = document.getElementById(`category${randomCategory.charAt(0).toUpperCase() + randomCategory.slice(1)}`);
+            if (radioToSelect) {
+                radioToSelect.checked = true;
+                toggleCustomInput();
+                handleGenerateNickname();
             } else {
-                console.error("Invalid index for deletion:", event.target.dataset.index);
+                console.warn(`Radio button for category ${randomCategory} not found. Ensure ID format is 'categoryCategoryName'.`);
+                handleGenerateNickname();
+            }
+        } else {
+            generatedNicknameInput.value = "No categories available to select randomly!";
+            copyBtn.style.display = 'none';
+            saveBtn.style.display = 'none';
+            shareBtn.style.display = 'none';
+        }
+    });
+
+    // Event listeners for Collection Management
+    addCollectionBtn.addEventListener('click', addCollection);
+    currentCollectionSelect.addEventListener('change', () => {
+        localStorage.setItem('activeCollection', currentCollectionSelect.value);
+        displaySavedNicknames();
+    });
+
+    // Updated Event Delegation for Delete Buttons (now handling collection and index)
+    savedNicknamesList.addEventListener('click', function(event) {
+        if (event.target.classList.contains('delete-nickname-btn')) {
+            const collectionName = event.target.dataset.collection;
+            const indexToDelete = parseInt(event.target.dataset.index);
+
+            if (collectionName && !isNaN(indexToDelete)) {
+                deleteNickname(collectionName, indexToDelete);
+            } else {
+                console.error("Invalid data for deletion:", event.target.dataset.collection, event.target.dataset.index);
             }
         }
     });
 
-    // Initial state setup
+    // Initial state setup on page load
     generatedNicknameInput.placeholder = "Your new nickname appears here...";
     copyBtn.style.display = 'none';
     saveBtn.style.display = 'none';
-    toggleCustomInput(); // Call once on load to set initial visibility
-    displaySavedNicknames(); // Load saved nicknames on page load
+    shareBtn.style.display = 'none';
+    toggleCustomInput();
+    populateCollectionSelect();
+    displaySavedNicknames();
+
 });
